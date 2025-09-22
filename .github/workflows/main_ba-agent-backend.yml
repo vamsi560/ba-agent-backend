@@ -40,6 +40,7 @@ jobs:
             !venv/
             !.git/
             !.github/
+            !output*.tar.gz
 
   deploy:
     runs-on: ubuntu-latest
@@ -66,7 +67,7 @@ jobs:
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'production'
-          package: python-app
+          package: ./python-app
 
       - name: Set Startup Command
         run: |
