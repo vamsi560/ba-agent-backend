@@ -75,12 +75,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'ba-agent-backend'
-          slot-name: 'Production'
+          slot-name: 'production'
           package: deploy/
 
-      - name: Set Startup Command
-        run: |
-          az webapp config set \
-            --name ba-agent-backend \
-            --resource-group chatpdf \
-            --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
