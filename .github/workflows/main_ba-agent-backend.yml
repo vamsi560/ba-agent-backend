@@ -35,15 +35,15 @@ jobs:
           shopt -s nullglob
           py_files=(*.py)
           if [ ${#py_files[@]} -gt 0 ]; then
-            cp -r "${py_files[@]}" deploy/
+            cp -r "${py_files[@]}" deploy/ || true
           fi
 
           # Copy requirements.txt if it exists
-          [ -f requirements.txt ] && cp requirements.txt deploy/
+          [ -f requirements.txt ] && cp requirements.txt deploy/ || true
 
           # Copy additional folders if they exist
-          [ -d templates ] && cp -r templates deploy/templates
-          [ -d static ] && cp -r static deploy/static
+          [ -d templates ] && cp -r templates deploy/templates || true
+          [ -d static ] && cp -r static deploy/static || true
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
@@ -92,3 +92,4 @@ jobs:
             --name ba-agent-backend \
             --resource-group chatpdf \
             --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
+
