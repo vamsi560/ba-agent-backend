@@ -45,11 +45,17 @@ jobs:
           [ -d templates ] && cp -r templates deploy/templates || true
           [ -d static ] && cp -r static deploy/static || true
 
+      - name: Zip deployment package
+        run: |
+          cd deploy
+          zip -r ../deploy.zip ./*
+          cd ..
+          
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: deploy
+          path: deploy.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -63,14 +69,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
+        
 
-      - name: Ensure deploy folder exists
-        run: |
-          mkdir -p deploy
-          mv * deploy/ || echo "No files found to move into deploy/"
+      # - name: Ensure deploy folder exists
+      #   run: |
+      #     mkdir -p deploy
+      #     mv * deploy/ || echo "No files found to move into deploy/"
 
       - name: List deploy folder (debug)
-        run: ls -la deploy/
+        run: ls -la 
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -84,12 +91,15 @@ jobs:
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'Production'
-          package: ./deploy
+          package: deploy.zip
 
       - name: Set Startup Command
         run: |
           az webapp config set \
             --name ba-agent-backend \
             --resource-group chatpdf \
-            --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
+            # --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
+            --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
+            
+
 
