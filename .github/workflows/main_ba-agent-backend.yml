@@ -13,9 +13,10 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -65,24 +66,18 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A9EB8545455045E0914BD67D690AE82B }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A3DA5A2CB39049CBB1D9D462C7041EDA }}
 
-      # Cleanup old files before deployment
-      - name: Clean /wwwroot before deploy
-        run: |
-        #  az webapp ssh --name ba-agent-backend --resource-group chatpdf --command "rm -rf /home/site/wwwroot/*"
-
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'production'
 
-      # Optional: set startup command (replace with your framework)
-      # - name: Set Startup Command
-      #   run: |
-      #     az webapp config set \
-      #       --name ba-agent-backend \
-      #       --resource-group <your-rg> \
-      #       --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
-
- 
+      # Set Startup Command for Python script entrypoint
+      - name: Set Startup Command
+        run: |
+          echo "Setting startup command..."
+          az webapp config set \
+            --name ba-agent-backend \
+            --resource-group <your-rg> \
+            --startup-file "python /home/site/wwwroot/app.py"
