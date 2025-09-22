@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - ba-agent-backend
+name: Build and Deploy Python App to Azure Web App - ba-agent-backend
 
 on:
   push:
@@ -35,15 +35,15 @@ jobs:
           shopt -s nullglob
           py_files=(*.py)
           if [ ${#py_files[@]} -gt 0 ]; then
-            cp -r "${py_files[@]}" deploy/ || true
+            cp -r "${py_files[@]}" deploy/
           fi
 
           # Copy requirements.txt if it exists
-          [ -f requirements.txt ] && cp requirements.txt deploy/ || true
+          [ -f requirements.txt ] && cp requirements.txt deploy/
 
           # Copy additional folders if they exist
-          [ -d templates ] && cp -r templates deploy/templates || true
-          [ -d static ] && cp -r static deploy/static || true
+          [ -d templates ] && cp -r templates deploy/templates
+          [ -d static ] && cp -r static deploy/static
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
@@ -64,10 +64,13 @@ jobs:
         with:
           name: python-app
 
-      - name: List downloaded files (debug)
+      - name: Ensure deploy folder exists
         run: |
-          ls -la
-          ls -la deploy/ || echo "No deploy folder found"
+          mkdir -p deploy
+          mv * deploy/ || echo "No files found to move into deploy/"
+
+      - name: List deploy folder (debug)
+        run: ls -la deploy/
 
       - name: Login to Azure
         uses: azure/login@v2
