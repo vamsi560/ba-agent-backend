@@ -27,17 +27,19 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
+      - name: Prepare deployment package
+        run: |
+          mkdir deploy
+          cp -r *.py requirements.txt manage.py deploy/
+          # Include other folders if needed, e.g., templates, static
+          # cp -r templates deploy/templates
+          # cp -r static deploy/static
+
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            ./**/*.py
-            requirements.txt
-            manage.py
-            !venv/
-            !.git/
-            !.github/
+          path: deploy
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,6 +54,11 @@ jobs:
         with:
           name: python-app
 
+      - name: List downloaded files (debug)
+        run: |
+          ls -la
+          ls -la deploy/ || echo "No deploy folder found"
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -64,7 +71,7 @@ jobs:
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'Production'
-          package: ./python-app
+          package: ./deploy
 
       - name: Set Startup Command
         run: |
