@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - ba-agent-backend
+name: Build and Deploy Python App - ba-agent-backend
 
 on:
   push:
@@ -29,11 +29,16 @@ jobs:
 
       - name: Prepare deployment package
         run: |
-          mkdir deploy
-          cp -r *.py requirements.txt app.py deploy/
-          # Include other folders if needed, e.g., templates, static
-          # cp -r templates deploy/templates
-          # cp -r static deploy/static
+          mkdir -p deploy
+          cp -r *.py requirements.txt deploy/
+          # Copy additional folders if needed
+          [ -d templates ] && cp -r templates deploy/templates
+          [ -d static ] && cp -r static deploy/static
+
+      - name: Verify deployment package
+        run: |
+          echo "Listing deploy folder contents"
+          ls -la deploy/
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
@@ -53,11 +58,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
+          path: deploy  # ensure deploy folder exists
 
-      - name: List downloaded files (debug)
+      - name: Verify downloaded artifact
         run: |
-          ls -la
-          ls -la deploy/ || echo "No deploy folder found"
+          echo "Listing downloaded deploy folder"
+          ls -la deploy/
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -71,7 +77,7 @@ jobs:
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'Production'
-          package: ./deploy
+          package: deploy  # points to the folder containing your app files
 
       - name: Set Startup Command
         run: |
@@ -79,4 +85,3 @@ jobs:
             --name ba-agent-backend \
             --resource-group chatpdf \
             --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
-
