@@ -21,15 +21,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Create and activate virtual environment
+      - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install -r requirements.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Upload artifact
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
@@ -40,7 +38,6 @@ jobs:
             !venv/
             !.git/
             !.github/
-            !output*.tar.gz
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,7 +47,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact
+      - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
@@ -66,12 +63,12 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'ba-agent-backend'
-          slot-name: 'production'
+          slot-name: 'Production'
           package: ./python-app
 
       - name: Set Startup Command
         run: |
           az webapp config set \
             --name ba-agent-backend \
-            --resource-group <your-rg> \
-            --startup-file "python /home/site/wwwroot/app.py"
+            --resource-group chatpdf \
+            --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
