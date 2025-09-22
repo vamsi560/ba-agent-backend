@@ -30,7 +30,7 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir deploy
-          cp -r *.py requirements.txt manage.py deploy/
+          cp -r *.py requirements.txt app.py deploy/
           # Include other folders if needed, e.g., templates, static
           # cp -r templates deploy/templates
           # cp -r static deploy/static
@@ -79,3 +79,4 @@ jobs:
             --name ba-agent-backend \
             --resource-group chatpdf \
             --startup-file "python /home/site/wwwroot/app.py runserver 0.0.0.0:8000"
+
