@@ -68,7 +68,7 @@ jobs:
       # Cleanup old files before deployment
       - name: Clean /wwwroot before deploy
         run: |
-          az webapp ssh --name ba-agent-backend --resource-group chatpdf --command "rm -rf /home/site/wwwroot/*"
+        #  az webapp ssh --name ba-agent-backend --resource-group chatpdf --command "rm -rf /home/site/wwwroot/*"
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
@@ -84,4 +84,5 @@ jobs:
       #       --name ba-agent-backend \
       #       --resource-group <your-rg> \
       #       --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
+
  
