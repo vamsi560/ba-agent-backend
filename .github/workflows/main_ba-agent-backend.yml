@@ -1,4 +1,4 @@
-name: Build and deploy Python app to Azure Web App - ba-agent-backend
+name: Build and Deploy Python App to Azure Web App - ba-agent-backend
 
 on:
   push:
@@ -13,37 +13,45 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Create and activate virtual environment
+      - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install -r requirements.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy
 
-      # Optional: run tests
-      # - name: Run tests
-      #   run: pytest
+          # Copy all Python files
+          cp -r *.py deploy/ || true
 
-      - name: Upload artifact for deployment
+          # Copy requirements.txt
+          [ -f requirements.txt ] && cp requirements.txt deploy/ || true
+
+          # Copy templates and static folders
+          [ -d templates ] && cp -r templates deploy/templates || true
+          [ -d static ] && cp -r static deploy/static || true
+
+      - name: Zip deployment package
+        run: |
+          cd deploy
+          zip -r ../deploy.zip ./*
+          cd ..
+
+      - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-app
-          path: |
-            ./**/*.py
-            requirements.txt
-            manage.py
-            !venv/
-            !.git/
-            !.github/
-            !output*.tar.gz
+          name: python-app-zip
+          path: deploy.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -53,10 +61,14 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact from build job
+      - name: Download deployment artifact
         uses: actions/download-artifact@v4
         with:
-          name: python-app
+          name: python-app-zip
+          path: .
+
+      - name: List deploy folder (debug)
+        run: ls -la
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -65,23 +77,16 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A9EB8545455045E0914BD67D690AE82B }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A3DA5A2CB39049CBB1D9D462C7041EDA }}
 
-      # Cleanup old files before deployment
-      - name: Clean /wwwroot before deploy
-        run: |
-          az webapp ssh --name ba-agent-backend --resource-group chatpdf --command "rm -rf /home/site/wwwroot/*"
-
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
           app-name: 'ba-agent-backend'
           slot-name: 'production'
+          package: deploy.zip
 
-      # Optional: set startup command (replace with your framework)
-      # - name: Set Startup Command
-      #   run: |
-      #     az webapp config set \
-      #       --name ba-agent-backend \
-      #       --resource-group <your-rg> \
-      #       --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
- 
+      - name: Set Startup Command
+        run: |
+          az webapp config set \
+            --name ba-agent-backend \
+            --resource-group chatpdf \
+            --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 app:app"

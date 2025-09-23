@@ -1,9 +1,8 @@
 import os
 import sys
 
-# Ensure backend is importable
-repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-backend_dir = os.path.join(repo_root, 'backend')
+# Add backend folder to Python path
+backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
@@ -12,17 +11,15 @@ try:
     from vercel_main import app as flask_app
     print("✅ Successfully imported Vercel-optimized backend")
 except ImportError as e:
-    print(f"⚠️  Warning: Could not import Vercel-optimized backend: {e}")
+    print(f"⚠️ Warning: Could not import Vercel-optimized backend: {e}")
     print("   Falling back to basic Flask app")
-    
-    # Fallback to basic Flask app if imports fail
     from flask import Flask, jsonify
     flask_app = Flask(__name__)
-    
+
     @flask_app.route('/api/health')
     def health_check():
         return jsonify({
-            'status': 'healthy', 
+            'status': 'healthy',
             'environment': 'vercel',
             'note': 'Basic Flask app - backend imports failed'
         })
@@ -30,7 +27,7 @@ except ImportError as e:
 # Vercel expects a callable named `app`
 app = flask_app
 
-# Add CORS headers for Vercel
+# CORS headers
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -38,11 +35,11 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
-# Additional health check endpoint
+# Extra health check endpoint
 @app.route('/api/vercel-health')
 def vercel_health():
-    return jsonify({
+    return {
         'status': 'healthy',
         'environment': 'vercel',
         'backend_type': 'vercel-optimized' if 'vercel_main' in sys.modules else 'basic-fallback'
-    })
+    }
