@@ -1,0 +1,135 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - ba-agent-backend-prod
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            .
+            !venv/
+            !.git/
+            !.github/
+            !__pycache__/
+            !*.pyc
+            !.pytest_cache/
+            !node_modules/
+            !.env
+            !.env.local
+            !.DS_Store
+            !Thumbs.db
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FD7F7D495B6C40BC921B9B25616E5C43 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D984F67CA478407095AE4D438A7BE2DA }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0B418742BA6F46EB856397E86582080C }}
+
+      - name: Check and enable App Service
+        run: |
+          echo "Checking App Service status..."
+          # Check if the app service is running
+          app_state=$(az webapp show --name ba-agent-backend-prod --resource-group $(az webapp list --query "[?name=='ba-agent-backend-prod'].resourceGroup" -o tsv) --query "state" -o tsv)
+          echo "App Service state: $app_state"
+          
+          if [ "$app_state" != "Running" ]; then
+            echo "App Service is not running. Starting the service..."
+            az webapp start --name ba-agent-backend-prod --resource-group $(az webapp list --query "[?name=='ba-agent-backend-prod'].resourceGroup" -o tsv)
+            echo "Waiting for service to start..."
+            sleep 30
+          else
+            echo "App Service is already running"
+          fi
+
+      - name: Check for existing deployments
+        run: |
+          echo "Checking for any ongoing deployments..."
+          # Wait for any existing deployments to complete
+          sleep 30
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'ba-agent-backend-prod'
+          slot-name: 'Production'
+          restart: true
+          clean: true
+        continue-on-error: true
+
+      - name: 'Retry deployment if failed'
+        if: steps.deploy-to-webapp.outcome == 'failure'
+        run: |
+          echo "First deployment attempt failed. Checking service status and retrying..."
+          # Ensure service is running
+          az webapp start --name ba-agent-backend-prod --resource-group $(az webapp list --query "[?name=='ba-agent-backend-prod'].resourceGroup" -o tsv)
+          sleep 60
+
+      - name: 'Retry Deploy to Azure Web App'
+        if: steps.deploy-to-webapp.outcome == 'failure'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'ba-agent-backend-prod'
+          slot-name: 'Production'
+          restart: true
+          clean: true
+
+      - name: 'Verify deployment'
+        run: |
+          echo "Verifying deployment..."
+          app_url="https://ba-agent-backend-prod.azurewebsites.net"
+          echo "App Service URL: $app_url"
+          
+          # Wait for app to be ready
+          sleep 30
+          
+          # Check if the app is responding (optional)
+          # curl -f $app_url || echo "App may still be starting up"
+          

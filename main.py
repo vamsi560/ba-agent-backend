@@ -4419,12 +4419,38 @@ def health_check():
             'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
+# Add health check endpoints for Azure Web App
+@app.route("/", methods=['GET'])
+def root_health_check():
+    """Root health check endpoint for Azure Web App"""
+    return jsonify({
+        "status": "healthy",
+        "service": "BA Agent Backend",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "message": "BA Agent Backend is running successfully!"
+    })
+
+@app.route("/api/health", methods=['GET'])
+def api_health_check():
+    """API health check endpoint"""
+    return jsonify({
+        "status": "healthy", 
+        "service": "BA Agent API",
+        "timestamp": datetime.now().isoformat()
+    })
+
 if __name__ == '__main__':
+    # Configuration for Azure Web App deployment
+    port = int(os.environ.get('PORT', 8000))
     print("🚀 Starting Enhanced BA Agent API...")
     print("✅ Multi-user authentication enabled")
-    print("✅ Project management enabled")
+    print("✅ Project management enabled")  
     print("✅ Integration services enabled")
     print("✅ Document analysis enabled")
     print("✅ All original functionality preserved")
+    print(f"🌐 Server starting on port {port}")
     
-    app.run(debug=True, port=5000)
+    # Use production settings for Azure
+    debug_mode = os.environ.get('FLASK_ENV', 'production') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

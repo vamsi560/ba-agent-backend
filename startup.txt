@@ -1,0 +1,8 @@
+# Azure Web App Configuration File
+# This file tells Azure Web App how to start the Python application
+
+[build]
+  command = "pip install -r requirements.txt"
+
+[run]
+  command = "python main.py"
